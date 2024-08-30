@@ -14,7 +14,7 @@ app = Client("my_bot", api_id="25064357", api_hash="cda9f1b3f9da4c0c93d1f5c23ccb
 # Function to save messages to MongoDB
 def save_message_to_db(message: Message):
     message_data = {
-        "message_id": message.message.id,
+        "message_id": message.id,  # Corrected from message.message_id to message.id
         "chat_id": message.chat.id,
         "user_id": message.from_user.id if message.from_user else None,
         "username": message.from_user.username if message.from_user else None,
@@ -55,4 +55,3 @@ def randiproof(client, message: Message):
 
 if __name__ == "__main__":
     app.run()
-
