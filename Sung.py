@@ -26,32 +26,32 @@ def save_message_to_db(message: Message):
 
 # Handler to track and save all messages
 @app.on_message(filters.group)
-def track_messages(client, message: Message):
+async def track_messages(client, message: Message):
     save_message_to_db(message)
     
     # Check for blacklisted content
     if message.text:
         blacklisted_text = blacklist_collection.find_one({"type": "text", "content": message.text, "chat_id": message.chat.id})
         if blacklisted_text:
-            message.delete()
+            await message.delete()
     elif message.sticker:
         blacklisted_sticker = blacklist_collection.find_one({"type": "sticker", "content": message.sticker.file_id, "chat_id": message.chat.id})
         if blacklisted_sticker:
-            message.delete()
+            await message.delete()
 
 # Handler for the /randiproof command
 @app.on_message(filters.command("randiproof") & filters.reply & filters.user("admin"))
-def randiproof(client, message: Message):
+async def randiproof(client, message: Message):
     reply = message.reply_to_message
     if reply:
         if reply.text:
             # Blacklist the text
             blacklist_collection.insert_one({"type": "text", "content": reply.text, "chat_id": message.chat.id})
-            message.reply_text(f"Text blacklisted successfully.")
+            await message.reply_text(f"Text blacklisted successfully.")
         elif reply.sticker:
             # Blacklist the sticker ID
             blacklist_collection.insert_one({"type": "sticker", "content": reply.sticker.file_id, "chat_id": message.chat.id})
-            message.reply_text(f"Sticker blacklisted successfully.")
+            await message.reply_text(f"Sticker blacklisted successfully.")
 
 if __name__ == "__main__":
     app.run()
