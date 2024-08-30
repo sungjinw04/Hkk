@@ -40,11 +40,13 @@ async def track_messages(client, message: Message):
     # Check for blacklisted content
     try:
         if message.text:
+            logging.info(f"Checking text: {message.text}")
             blacklisted_text = blacklist_collection.find_one({"type": "text", "content": message.text, "chat_id": message.chat.id})
             if blacklisted_text:
                 await message.delete()
                 logging.info(f"Deleted blacklisted text: {message.text}")
         elif message.sticker:
+            logging.info(f"Checking sticker: {message.sticker.file_id}")
             blacklisted_sticker = blacklist_collection.find_one({"type": "sticker", "content": message.sticker.file_id, "chat_id": message.chat.id})
             if blacklisted_sticker:
                 await message.delete()
@@ -59,13 +61,13 @@ async def randiproof(client, message: Message):
     try:
         if reply:
             if reply.text:
+                logging.info(f"Blacklisting text: {reply.text}")
                 blacklist_collection.insert_one({"type": "text", "content": reply.text, "chat_id": message.chat.id})
                 await message.reply_text(f"Text blacklisted successfully.")
-                logging.info(f"Blacklisted text: {reply.text}")
             elif reply.sticker:
+                logging.info(f"Blacklisting sticker: {reply.sticker.file_id}")
                 blacklist_collection.insert_one({"type": "sticker", "content": reply.sticker.file_id, "chat_id": message.chat.id})
                 await message.reply_text(f"Sticker blacklisted successfully.")
-                logging.info(f"Blacklisted sticker: {reply.sticker.file_id}")
     except Exception as e:
         logging.error(f"Error blacklisting content: {e}")
 
