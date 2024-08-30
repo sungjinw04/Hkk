@@ -20,50 +20,46 @@ app = Client("my_bot", api_id="25064357", api_hash="cda9f1b3f9da4c0c93d1f5c23ccb
 async def track_messages(client, message: Message):
     logging.info(f"Received message: {message.text}")
     
-    try:
-        if message.text:
-            logging.info(f"Checking text: {message.text}")
-            blacklisted_text = blacklist_collection.find_one({"type": "text", "content": message.text, "chat_id": message.chat.id})
-            if blacklisted_text:
-                logging.info(f"Deleting blacklisted text: {message.text}")
-                try:
-                    await message.delete()
-                    logging.info("Message deleted successfully.")
-                except Exception as e:
-                    logging.error(f"Error deleting message: {e}")
-        elif message.sticker:
-            logging.info(f"Checking sticker: {message.sticker.file_id}")
-            blacklisted_sticker = blacklist_collection.find_one({"type": "sticker", "content": message.sticker.file_id, "chat_id": message.chat.id})
-            if blacklisted_sticker:
-                logging.info(f"Deleting blacklisted sticker: {message.sticker.file_id}")
-                try:
-                    await message.delete()
-                    logging.info("Sticker deleted successfully.")
-                except Exception as e:
-                    logging.error(f"Error deleting sticker: {e}")
-    except Exception as e:
-        logging.error(f"Error processing message: {e}")
+    if message.text:
+        blacklisted_text = blacklist_collection.find_one({"type": "text", "content": message.text, "chat_id": message.chat.id})
+        if blacklisted_text:
+            logging.info(f"Attempting to delete blacklisted text: {message.text}")
+            try:
+                await message.delete()
+                logging.info("Message deleted successfully.")
+            except Exception as e:
+                logging.error(f"Error deleting message: {e}")
+    elif message.sticker:
+        blacklisted_sticker = blacklist_collection.find_one({"type": "sticker", "content": message.sticker.file_id, "chat_id": message.chat.id})
+        if blacklisted_sticker:
+            logging.info(f"Attempting to delete blacklisted sticker: {message.sticker.file_id}")
+            try:
+                await message.delete()
+                logging.info("Sticker deleted successfully.")
+            except Exception as e:
+                logging.error(f"Error deleting sticker: {e}")
 
 # Handler for the /randiproof command without using filters
 @app.on_message()
 async def handle_command(client, message: Message):
-    if message.text.startswith("/randiproof"):
+    if message.text and message.text.startswith("/randiproof"):
         logging.info("randiproof command received")
         reply = message.reply_to_message
-        try:
-            if reply:
-                if reply.text:
-                    logging.info(f"Attempting to blacklist text: {reply.text}")
+        if reply:
+            if reply.text:
+                logging.info(f"Attempting to blacklist text: {reply.text}")
+                try:
                     blacklist_collection.insert_one({"type": "text", "content": reply.text, "chat_id": message.chat.id})
                     await message.reply_text(f"Text blacklisted successfully.")
-                    logging.info("Text blacklisted successfully.")
-                elif reply.sticker:
-                    logging.info(f"Attempting to blacklist sticker: {reply.sticker.file_id}")
+                except Exception as e:
+                    logging.error(f"Error blacklisting text: {e}")
+            elif reply.sticker:
+                logging.info(f"Attempting to blacklist sticker: {reply.sticker.file_id}")
+                try:
                     blacklist_collection.insert_one({"type": "sticker", "content": reply.sticker.file_id, "chat_id": message.chat.id})
                     await message.reply_text(f"Sticker blacklisted successfully.")
-                    logging.info("Sticker blacklisted successfully.")
-        except Exception as e:
-            logging.error(f"Error in randiproof command: {e}")
+                except Exception as e:
+                    logging.error(f"Error blacklisting sticker: {e}")
 
 if __name__ == "__main__":
     logging.info("Starting bot...")
