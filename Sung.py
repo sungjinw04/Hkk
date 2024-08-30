@@ -10,11 +10,11 @@ BOT_TOKEN = "7329929698:AAGD5Ccwm0qExCq9_6GVHDp2E7iidLH-McU"
 # Initialize the Pyrogram Client
 app = Client("sung_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Sets to store blacklisted words and stickers
+# Create a set to store blacklisted words and stickers
 blacklisted_words = set()
 blacklisted_stickers = set()
 
-# Command to add a word to the blacklist
+# Command to blacklist a word
 @app.on_message(filters.command("blacklist") & filters.private)
 async def blacklist_word(client, message: Message):
     if len(message.command) < 2:
@@ -25,7 +25,7 @@ async def blacklist_word(client, message: Message):
     blacklisted_words.add(word)
     await message.reply_text(f"Word '{word}' has been blacklisted.")
 
-# Command to add a sticker to the blacklist by replying to a sticker
+# Command to blacklist a sticker
 @app.on_message(filters.command("blackliststicker") & filters.reply & filters.private)
 async def blacklist_sticker(client, message: Message):
     if message.reply_to_message.sticker:
@@ -49,6 +49,5 @@ async def delete_blacklisted_stickers(client, message: Message):
     if message.sticker.file_id in blacklisted_stickers:
         await message.delete()
 
-# Run the bot
 if __name__ == "__main__":
     app.run()
