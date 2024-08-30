@@ -1,70 +1,54 @@
-import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from pymongo import MongoClient
+import os
 
-# Enable logging to help with debugging
-logging.basicConfig(level=logging.INFO)
-
-# Initialize the MongoDB client and select the database and collections
-mongo_client = MongoClient("mongodb+srv://Sungjinwoo4:sung4224@cluster0.ayaos.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
-db = mongo_client["telegram_bot_db"]
-messages_collection = db["messages"]
-blacklist_collection = db["blacklist"]
+# Replace these with your actual credentials
+API_ID = "25064357"
+API_HASH = "cda9f1b3f9da4c0c93d1f5c23ccb19e2"
+BOT_TOKEN = "7329929698:AAGD5Ccwm0qExCq9_6GVHDp2E7iidLH-McU"
 
 # Initialize the Pyrogram Client
-app = Client("my_bot", api_id="25064357", api_hash="cda9f1b3f9da4c0c93d1f5c23ccb19e2", bot_token="7329929698:AAGD5Ccwm0qExCq9_6GVHDp2E7iidLH-McU")
+app = Client("sung_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Handler to track and delete blacklisted messages
-@app.on_message()
-async def track_messages(client, message: Message):
-    logging.debug(f"Received message: {message.text}, Sticker ID: {message.sticker.file_id if message.sticker else 'None'}")
+# Sets to store blacklisted words and stickers
+blacklisted_words = set()
+blacklisted_stickers = set()
 
-    try:
-        if message.text:
-            logging.debug(f"Checking text against blacklist: {message.text}")
-            blacklisted_text = blacklist_collection.find_one({"type": "text", "content": message.text, "chat_id": message.chat.id})
-            if blacklisted_text:
-                logging.debug(f"Blacklisted text found: {message.text}")
-                try:
-                    await message.delete()
-                    logging.debug("Message deleted successfully.")
-                except Exception as e:
-                    logging.error(f"Error deleting message: {e}")
-        elif message.sticker:
-            logging.debug(f"Checking sticker against blacklist: {message.sticker.file_id}")
-            blacklisted_sticker = blacklist_collection.find_one({"type": "sticker", "content": message.sticker.file_id, "chat_id": message.chat.id})
-            if blacklisted_sticker:
-                logging.debug(f"Blacklisted sticker found: {message.sticker.file_id}")
-                try:
-                    await message.delete()
-                    logging.debug("Sticker deleted successfully.")
-                except Exception as e:
-                    logging.error(f"Error deleting sticker: {e}")
-    except Exception as e:
-        logging.error(f"Error processing message: {e}")
+# Command to add a word to the blacklist
+@app.on_message(filters.command("blacklist") & filters.private)
+async def blacklist_word(client, message: Message):
+    if len(message.command) < 2:
+        await message.reply_text("Please provide a word to blacklist.")
+        return
 
-# Handler for the /randiproof command
-@app.on_message()
-async def handle_command(client, message: Message):
-    if message.text and message.text.startswith("/randiproof"):
-        logging.debug("randiproof command received")
-        reply = message.reply_to_message
-        if reply:
-            try:
-                if reply.text:
-                    logging.debug(f"Blacklisting text: {reply.text}")
-                    blacklist_collection.insert_one({"type": "text", "content": reply.text, "chat_id": message.chat.id})
-                    await message.reply_text(f"Text blacklisted successfully.")
-                    logging.debug("Text blacklisted successfully.")
-                elif reply.sticker:
-                    logging.debug(f"Blacklisting sticker: {reply.sticker.file_id}")
-                    blacklist_collection.insert_one({"type": "sticker", "content": reply.sticker.file_id, "chat_id": message.chat.id})
-                    await message.reply_text(f"Sticker blacklisted successfully.")
-                    logging.debug("Sticker blacklisted successfully.")
-            except Exception as e:
-                logging.error(f"Error blacklisting content: {e}")
+    word = message.command[1].lower()
+    blacklisted_words.add(word)
+    await message.reply_text(f"Word '{word}' has been blacklisted.")
 
+# Command to add a sticker to the blacklist by replying to a sticker
+@app.on_message(filters.command("blackliststicker") & filters.reply & filters.private)
+async def blacklist_sticker(client, message: Message):
+    if message.reply_to_message.sticker:
+        sticker_id = message.reply_to_message.sticker.file_id
+        blacklisted_stickers.add(sticker_id)
+        await message.reply_text("Sticker has been blacklisted.")
+    else:
+        await message.reply_text("Please reply to a sticker to blacklist it.")
+
+# Delete messages containing blacklisted words
+@app.on_message(filters.text)
+async def delete_blacklisted_words(client, message: Message):
+    for word in blacklisted_words:
+        if word in message.text.lower():
+            await message.delete()
+            break
+
+# Delete messages containing blacklisted stickers
+@app.on_message(filters.sticker)
+async def delete_blacklisted_stickers(client, message: Message):
+    if message.sticker.file_id in blacklisted_stickers:
+        await message.delete()
+
+# Run the bot
 if __name__ == "__main__":
-    logging.info("Starting bot...")
     app.run()
